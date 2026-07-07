@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mi Radio</title>
+<meta name="description" content="Radio en directo: Radio Marca, Cadena SER Granada, COPE Granada y Canal Sur Radio.">
+<meta name="theme-color" content="#2f6bff">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Mi Radio">
+<meta name="mobile-web-app-capable" content="yes">
+<style>
+  :root{
+    --bg:#f4f7fc; --card:#ffffff; --ink:#0f1b33; --muted:#6b7893;
+    --line:#e6ecf7; --accent:#2f6bff; --accent2:#7a3cff; --ok:#1fae5a;
+    --shadow:0 10px 30px rgba(21,44,84,.10);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg); color:var(--ink);
+    min-height:100vh; -webkit-tap-highlight-color:transparent;
+    padding:env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left);
+  }
+  .wrap{max-width:520px; margin:0 auto; padding:22px 18px 200px}
+  header{display:flex; align-items:center; gap:12px; margin:8px 2px 22px}
+  header .logo{width:44px;height:44px;border-radius:13px;box-shadow:var(--shadow)}
+  header h1{font-size:20px; margin:0; letter-spacing:.2px}
+  header p{margin:2px 0 0; font-size:13px; color:var(--muted)}
+
+  .list{display:flex; flex-direction:column; gap:14px}
+  .station{
+    display:flex; align-items:center; gap:15px;
+    background:var(--card); border:1px solid var(--line); border-radius:18px;
+    padding:15px 16px; box-shadow:var(--shadow); cursor:pointer;
+    transition:transform .12s ease, border-color .2s ease;
+  }
+  .station:active{transform:scale(.985)}
+  .station.active{border-color:var(--accent)}
+  .badge{
+    width:52px;height:52px;border-radius:14px;flex:0 0 auto;
+    display:flex;align-items:center;justify-content:center;color:#fff;
+    font-weight:800;font-size:15px;letter-spacing:.3px;
+  }
+  .meta{flex:1;min-width:0}
+  .meta h2{margin:0;font-size:16px;line-height:1.2}
+  .meta span{display:block;margin-top:3px;font-size:12.5px;color:var(--muted)}
+  .eq{display:flex;align-items:flex-end;gap:3px;height:22px;width:24px;flex:0 0 auto;opacity:0}
+  .station.active .eq{opacity:1}
+  .eq i{width:4px;background:var(--accent);border-radius:2px;height:6px;animation:bounce 1s infinite ease-in-out}
+  .eq i:nth-child(2){animation-delay:.2s}
+  .eq i:nth-child(3){animation-delay:.4s}
+  .eq i:nth-child(4){animation-delay:.15s}
+  .station.active.paused .eq i{animation-play-state:paused}
+  @keyframes bounce{0%,100%{height:6px}50%{height:20px}}
+
+  /* Reproductor fijo */
+  .player{
+    position:fixed; left:0; right:0; bottom:0; z-index:20;
+    background:rgba(255,255,255,.92); backdrop-filter:saturate(1.4) blur(14px);
+    border-top:1px solid var(--line); box-shadow:0 -8px 30px rgba(21,44,84,.10);
+    padding:14px 18px calc(16px + env(safe-area-inset-bottom));
+    transform:translateY(120%); transition:transform .28s cubic-bezier(.2,.8,.2,1);
+  }
+  .player.show{transform:translateY(0)}
+  .player-inner{max-width:520px;margin:0 auto;display:flex;align-items:center;gap:14px}
+  .p-badge{width:50px;height:50px;border-radius:13px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:14px}
+  .p-meta{flex:1;min-width:0}
+  .p-meta h3{margin:0;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .p-meta span{font-size:12px;color:var(--muted)}
+  .play-btn{
+    width:56px;height:56px;flex:0 0 auto;border:none;border-radius:50%;cursor:pointer;
+    background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;
+    display:flex;align-items:center;justify-content:center;box-shadow:0 8px 20px rgba(47,107,255,.4);
+    transition:transform .12s ease}
+  .play-btn:active{transform:scale(.94)}
+  .play-btn svg{width:24px;height:24px;fill:#fff}
+  .vol{display:flex;align-items:center;gap:8px;margin:12px auto 0;max-width:520px}
+  .vol svg{width:18px;height:18px;fill:var(--muted);flex:0 0 auto}
+  .vol input{flex:1;accent-color:var(--accent)}
+
+  .install{
+    display:none;align-items:center;gap:10px;justify-content:center;
+    margin:20px 2px 0;padding:12px;border:1px dashed var(--accent);border-radius:14px;
+    background:#eef3ff;color:var(--accent);font-size:14px;font-weight:600;cursor:pointer}
+  .install.show{display:flex}
+  .hint{margin:26px 4px 0;font-size:12px;color:var(--muted);text-align:center;line-height:1.6}
+  .spin{animation:spin 1s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <img class="logo" src="icon-192.png" alt="Mi Radio">
+    <div>
+      <h1>Mi Radio</h1>
+      <p>Tus emisoras en directo</p>
+    </div>
+  </header>
+
+  <div class="list" id="list"></div>
+
+  <button class="install" id="installBtn">⬇️ Instalar app en el móvil</button>
+
+  <p class="hint" id="hint"></p>
+</div>
+
+<div class="player" id="player">
+  <div class="player-inner">
+    <div class="p-badge" id="pBadge">--</div>
+    <div class="p-meta">
+      <h3 id="pName">—</h3>
+      <span id="pState">Toca una emisora</span>
+    </div>
+    <button class="play-btn" id="playBtn" aria-label="Reproducir/Pausar">
+      <svg id="playIcon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+    </button>
+  </div>
+  <div class="vol">
+    <svg viewBox="0 0 24 24"><path d="M3 10v4h4l5 5V5L7 10H3zm13.5 2a4.5 4.5 0 0 0-2.5-4v8a4.5 4.5 0 0 0 2.5-4z"/></svg>
+    <input type="range" id="vol" min="0" max="1" step="0.01" value="0.9">
+  </div>
+</div>
+
+<audio id="audio" preload="none"></audio>
+
+<script>
+const STATIONS = [
+  { id:'marca', name:'Radio Marca', tag:'Deportes · Nacional', color:'#e2001a', abbr:'RM',
+    url:'https://playerservices.streamtheworld.com/api/livestream-redirect/RADIOMARCA_NACIONAL.mp3' },
+  { id:'ser', name:'Cadena SER Granada', tag:'102.5 FM · Granada', color:'#0a7d34', abbr:'SER',
+    url:'https://playerservices.streamtheworld.com/api/livestream-redirect/SER_ASO_GRANADA.mp3' },
+  { id:'cope', name:'COPE Granada', tag:'99.8 FM · Granada', color:'#0a4aa0', abbr:'COPE',
+    url:'https://wecast-bl02.flumotion.com/copesedes/granada.mp3' },
+  { id:'canalsur', name:'Canal Sur Radio', tag:'Andalucía · en directo', color:'#1a9b8a', abbr:'CSR',
+    url:'https://rtva-live-radio.flumotion.com/rtva/csr.mp3' },
+  { id:'canalsurgr', name:'Canal Sur Radio Granada', tag:'Andalucía · Granada', color:'#12857a', abbr:'CSG',
+    url:'https://rtva-live-radio.flumotion.com/rtva/csrgra.mp3' }
+];
+
+const audio = document.getElementById('audio');
+const listEl = document.getElementById('list');
+const player = document.getElementById('player');
+const pName = document.getElementById('pName');
+const pState = document.getElementById('pState');
+const pBadge = document.getElementById('pBadge');
+const playBtn = document.getElementById('playBtn');
+const playIcon = document.getElementById('playIcon');
+const volEl = document.getElementById('vol');
+
+const ICON_PLAY = 'M8 5v14l11-7z';
+const ICON_PAUSE = 'M6 5h4v14H6zM14 5h4v14h-4z';
+const ICON_LOAD = 'M12 4V2A10 10 0 0 0 2 12h2a8 8 0 0 1 8-8z';
+
+let current = null;
+
+// Construir la lista
+STATIONS.forEach(s => {
+  const el = document.createElement('div');
+  el.className = 'station';
+  el.dataset.id = s.id;
+  el.innerHTML = `
+    <div class="badge" style="background:linear-gradient(135deg, ${s.color}, ${shade(s.color)})">${s.abbr}</div>
+    <div class="meta"><h2>${s.name}</h2><span>${s.tag}</span></div>
+    <div class="eq"><i></i><i></i><i></i><i></i></div>`;
+  el.addEventListener('click', () => select(s));
+  listEl.appendChild(el);
+});
+
+function shade(hex){
+  const n=parseInt(hex.slice(1),16);
+  let r=(n>>16)&255,g=(n>>8)&255,b=n&255;
+  r=Math.max(0,r-40);g=Math.max(0,g-40);b=Math.max(0,b-10);
+  return `rgb(${r},${g},${b})`;
+}
+
+function select(s){
+  if(current && current.id===s.id){ togglePlay(); return; }
+  current = s;
+  audio.src = s.url;
+  pName.textContent = s.name;
+  pBadge.textContent = s.abbr;
+  pBadge.style.background = `linear-gradient(135deg, ${s.color}, ${shade(s.color)})`;
+  player.classList.add('show');
+  play();
+  markActive();
+}
+
+function play(){
+  pState.textContent = 'Conectando…';
+  setIcon(ICON_LOAD, true);
+  audio.play().catch(err => { pState.textContent = 'No se pudo reproducir. Reintenta.'; setIcon(ICON_PLAY,false); });
+}
+function togglePlay(){ audio.paused ? play() : audio.pause(); }
+
+playBtn.addEventListener('click', () => { if(!current) return; togglePlay(); });
+
+audio.addEventListener('playing', () => { pState.textContent='En directo ● reproduciendo'; setIcon(ICON_PAUSE,false); markActive(); });
+audio.addEventListener('pause',   () => { pState.textContent='En pausa'; setIcon(ICON_PLAY,false); markActive(true); });
+audio.addEventListener('waiting', () => { pState.textContent='Cargando…'; setIcon(ICON_LOAD,true); });
+audio.addEventListener('error',   () => { if(current){ pState.textContent='Emisora no disponible ahora'; setIcon(ICON_PLAY,false);} });
+
+function setIcon(d, spinning){ playIcon.querySelector('path').setAttribute('d',d); playIcon.classList.toggle('spin', !!spinning); }
+
+function markActive(paused){
+  document.querySelectorAll('.station').forEach(el => {
+    const on = current && el.dataset.id===current.id;
+    el.classList.toggle('active', on);
+    el.classList.toggle('paused', on && (paused || audio.paused));
+  });
+}
+
+volEl.addEventListener('input', () => audio.volume = parseFloat(volEl.value));
+audio.volume = parseFloat(volEl.value);
+
+// Media Session (controles del móvil / pantalla de bloqueo)
+if('mediaSession' in navigator){
+  audio.addEventListener('playing', () => {
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: current ? current.name : 'Mi Radio', artist: current ? current.tag : '', album:'Mi Radio'
+    });
+    navigator.mediaSession.playbackState='playing';
+  });
+  navigator.mediaSession.setActionHandler('play', play);
+  navigator.mediaSession.setActionHandler('pause', () => audio.pause());
+}
+
+// Instalación PWA
+let deferred=null;
+const installBtn=document.getElementById('installBtn');
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferred=e; installBtn.classList.add('show'); });
+installBtn.addEventListener('click', async () => {
+  if(!deferred) return;
+  deferred.prompt(); await deferred.userChoice; deferred=null; installBtn.classList.remove('show');
+});
+window.addEventListener('appinstalled', () => installBtn.classList.remove('show'));
+
+// Registrar service worker (solo funciona servido por http/https)
+if('serviceWorker' in navigator){
+  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(()=>{}));
+}
+
+// Pista para iOS
+const hint=document.getElementById('hint');
+const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent);
+hint.textContent = isIOS
+  ? 'Para instalar en iPhone: pulsa Compartir y "Añadir a pantalla de inicio".'
+  : 'Consejo: usa "Instalar app" o el menú del navegador para añadirla a la pantalla de inicio.';
+</script>
+</body>
+</html>

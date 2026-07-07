@@ -1,0 +1,17 @@
+{
+  "name": "Mi Radio",
+  "short_name": "Mi Radio",
+  "description": "Emisoras de radio en directo: Radio Marca, Cadena SER Granada, COPE Granada y Canal Sur Radio.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f4f7fc",
+  "theme_color": "#2f6bff",
+  "lang": "es",
+  "icons": [
+    { "src": "./icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "./icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "./icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
