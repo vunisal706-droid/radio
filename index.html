@@ -3,14 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Mi Radio</title>
-<meta name="description" content="Radio en directo: Radio Marca, Cadena SER Granada, COPE Granada y Canal Sur Radio.">
+<title>VicRadio</title>
+<meta name="description" content="Radio en directo: Radio Marca, Cadena SER Granada, COPE Granada, Canal Sur Radio y Onda Cero.">
 <meta name="theme-color" content="#2f6bff">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Mi Radio">
+<meta name="apple-mobile-web-app-title" content="VicRadio">
 <meta name="mobile-web-app-capable" content="yes">
 <style>
   :root{
@@ -96,9 +96,9 @@
 <body>
 <div class="wrap">
   <header>
-    <img class="logo" src="icon-192.png" alt="Mi Radio">
+    <img class="logo" src="icon-192.png" alt="VicRadio">
     <div>
-      <h1>Mi Radio</h1>
+      <h1>VicRadio</h1>
       <p>Tus emisoras en directo</p>
     </div>
   </header>
@@ -140,7 +140,9 @@ const STATIONS = [
   { id:'canalsur', name:'Canal Sur Radio', tag:'Andalucía · en directo', color:'#1a9b8a', abbr:'CSR',
     url:'https://rtva-live-radio.flumotion.com/rtva/csr.mp3' },
   { id:'canalsurgr', name:'Canal Sur Radio Granada', tag:'Andalucía · Granada', color:'#12857a', abbr:'CSG',
-    url:'https://rtva-live-radio.flumotion.com/rtva/csrgra.mp3' }
+    url:'https://rtva-live-radio.flumotion.com/rtva/csrgra.mp3' },
+  { id:'ondacero', name:'Onda Cero', tag:'Nacional · en directo', color:'#ff7a00', abbr:'OC',
+    url:'https://radio-atres-live.ondacero.es/api/livestream-redirect/OCAAC.aac' }
 ];
 
 const audio = document.getElementById('audio');
@@ -159,7 +161,6 @@ const ICON_LOAD = 'M12 4V2A10 10 0 0 0 2 12h2a8 8 0 0 1 8-8z';
 
 let current = null;
 
-// Construir la lista
 STATIONS.forEach(s => {
   const el = document.createElement('div');
   el.className = 'station';
@@ -218,11 +219,10 @@ function markActive(paused){
 volEl.addEventListener('input', () => audio.volume = parseFloat(volEl.value));
 audio.volume = parseFloat(volEl.value);
 
-// Media Session (controles del móvil / pantalla de bloqueo)
 if('mediaSession' in navigator){
   audio.addEventListener('playing', () => {
     navigator.mediaSession.metadata = new MediaMetadata({
-      title: current ? current.name : 'Mi Radio', artist: current ? current.tag : '', album:'Mi Radio'
+      title: current ? current.name : 'VicRadio', artist: current ? current.tag : '', album:'VicRadio'
     });
     navigator.mediaSession.playbackState='playing';
   });
@@ -230,7 +230,6 @@ if('mediaSession' in navigator){
   navigator.mediaSession.setActionHandler('pause', () => audio.pause());
 }
 
-// Instalación PWA
 let deferred=null;
 const installBtn=document.getElementById('installBtn');
 window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferred=e; installBtn.classList.add('show'); });
@@ -240,12 +239,10 @@ installBtn.addEventListener('click', async () => {
 });
 window.addEventListener('appinstalled', () => installBtn.classList.remove('show'));
 
-// Registrar service worker (solo funciona servido por http/https)
 if('serviceWorker' in navigator){
   window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(()=>{}));
 }
 
-// Pista para iOS
 const hint=document.getElementById('hint');
 const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent);
 hint.textContent = isIOS

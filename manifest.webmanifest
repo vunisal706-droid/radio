@@ -1,7 +1,7 @@
 {
-  "name": "Mi Radio",
-  "short_name": "Mi Radio",
-  "description": "Emisoras de radio en directo: Radio Marca, Cadena SER Granada, COPE Granada y Canal Sur Radio.",
+  "name": "VicRadio",
+  "short_name": "VicRadio",
+  "description": "Emisoras de radio en directo: Radio Marca, Cadena SER Granada, COPE Granada, Canal Sur Radio y Onda Cero.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

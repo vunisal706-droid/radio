@@ -1,6 +1,6 @@
 // Service worker mínimo para que la app sea instalable y cargue offline la interfaz.
 // El audio siempre necesita conexión (es streaming en directo).
-const CACHE = 'mi-radio-v1';
+const CACHE = 'vicradio-v1';
 const ASSETS = [
   './',
   './index.html',
