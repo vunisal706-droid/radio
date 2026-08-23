@@ -16,6 +16,7 @@
   :root{
     --bg:#f4f7fc; --card:#ffffff; --ink:#0f1b33; --muted:#6b7893;
     --line:#e6ecf7; --accent:#2f6bff; --accent2:#7a3cff; --ok:#1fae5a;
+    --warn:#d97706; --err:#dc2626;
     --shadow:0 10px 30px rgba(21,44,84,.10);
   }
   *{box-sizing:border-box}
@@ -41,6 +42,7 @@
   }
   .station:active{transform:scale(.985)}
   .station.active{border-color:var(--accent)}
+  .station:focus-visible{outline:3px solid var(--accent); outline-offset:3px}
   .badge{
     width:52px;height:52px;border-radius:14px;flex:0 0 auto;
     display:flex;align-items:center;justify-content:center;color:#fff;
@@ -61,7 +63,7 @@
   /* Reproductor fijo */
   .player{
     position:fixed; left:0; right:0; bottom:0; z-index:20;
-    background:rgba(255,255,255,.92); backdrop-filter:saturate(1.4) blur(14px);
+    background:rgba(255,255,255,.94); backdrop-filter:saturate(1.4) blur(14px);
     border-top:1px solid var(--line); box-shadow:0 -8px 30px rgba(21,44,84,.10);
     padding:14px 18px calc(16px + env(safe-area-inset-bottom));
     transform:translateY(120%); transition:transform .28s cubic-bezier(.2,.8,.2,1);
@@ -71,13 +73,18 @@
   .p-badge{width:50px;height:50px;border-radius:13px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:14px}
   .p-meta{flex:1;min-width:0}
   .p-meta h3{margin:0;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .p-meta span{font-size:12px;color:var(--muted)}
+  .p-meta span{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex:0 0 auto}
+  .dot.live{background:var(--ok)}
+  .dot.wait{background:var(--warn)}
+  .dot.bad{background:var(--err)}
   .play-btn{
     width:56px;height:56px;flex:0 0 auto;border:none;border-radius:50%;cursor:pointer;
     background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;
     display:flex;align-items:center;justify-content:center;box-shadow:0 8px 20px rgba(47,107,255,.4);
     transition:transform .12s ease}
   .play-btn:active{transform:scale(.94)}
+  .play-btn:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
   .play-btn svg{width:24px;height:24px;fill:#fff}
   .vol{display:flex;align-items:center;gap:8px;margin:12px auto 0;max-width:520px}
   .vol svg{width:18px;height:18px;fill:var(--muted);flex:0 0 auto}
@@ -91,12 +98,15 @@
   .hint{margin:26px 4px 0;font-size:12px;color:var(--muted);text-align:center;line-height:1.6}
   .spin{animation:spin 1s linear infinite}
   @keyframes spin{to{transform:rotate(360deg)}}
+  @media (prefers-reduced-motion: reduce){
+    *,*::before,*::after{animation-duration:.01ms !important;transition-duration:.01ms !important}
+  }
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
-    <img class="logo" src="icon-192.png" alt="VicRadio">
+    <img class="logo" src="icon-192.png" alt="VicRadio" width="44" height="44">
     <div>
       <h1>VicRadio</h1>
       <p>Tus emisoras en directo</p>
@@ -105,7 +115,7 @@
 
   <div class="list" id="list"></div>
 
-  <button class="install" id="installBtn">⬇️ Instalar app en el móvil</button>
+  <button class="install" id="installBtn">Instalar app en el móvil</button>
 
   <p class="hint" id="hint"></p>
 </div>
@@ -115,14 +125,15 @@
     <div class="p-badge" id="pBadge">--</div>
     <div class="p-meta">
       <h3 id="pName">—</h3>
-      <span id="pState">Toca una emisora</span>
+      <span><i class="dot" id="pDot"></i><span id="pState">Toca una emisora</span></span>
     </div>
-    <button class="play-btn" id="playBtn" aria-label="Reproducir/Pausar">
-      <svg id="playIcon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+    <button class="play-btn" id="playBtn" aria-label="Reproducir o pausar">
+      <svg id="playIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
     </button>
   </div>
   <div class="vol">
-    <svg viewBox="0 0 24 24"><path d="M3 10v4h4l5 5V5L7 10H3zm13.5 2a4.5 4.5 0 0 0-2.5-4v8a4.5 4.5 0 0 0 2.5-4z"/></svg>
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10v4h4l5 5V5L7 10H3zm13.5 2a4.5 4.5 0 0 0-2.5-4v8a4.5 4.5 0 0 0 2.5-4z"/></svg>
+    <label for="vol" class="sr-only" style="position:absolute;left:-9999px">Volumen</label>
     <input type="range" id="vol" min="0" max="1" step="0.01" value="0.9">
   </div>
 </div>
@@ -130,46 +141,84 @@
 <audio id="audio" preload="none"></audio>
 
 <script>
+/* ---------------------------------------------------------------
+   Cada emisora tiene VARIAS urls. Si una falla, se prueba la
+   siguiente automáticamente. Pon primero la que mejor te funcione.
+----------------------------------------------------------------*/
 const STATIONS = [
   { id:'marca', name:'Radio Marca', tag:'Deportes · Nacional', color:'#e2001a', abbr:'RM',
-    url:'https://playerservices.streamtheworld.com/api/livestream-redirect/RADIOMARCA_NACIONAL.mp3' },
+    urls:[
+      'https://playerservices.streamtheworld.com/api/livestream-redirect/RADIOMARCA_NACIONAL.mp3',
+      'https://25603.live.streamtheworld.com/RADIOMARCA_NACIONAL.mp3',
+      'https://playerservices.streamtheworld.com/api/livestream-redirect/RADIOMARCA_NACIONALAAC.aac'
+    ]},
   { id:'ser', name:'Cadena SER Granada', tag:'102.5 FM · Granada', color:'#0a7d34', abbr:'SER',
-    url:'https://playerservices.streamtheworld.com/api/livestream-redirect/SER_ASO_GRANADA.mp3' },
+    urls:[
+      'https://playerservices.streamtheworld.com/api/livestream-redirect/SER_ASO_GRANADA.mp3',
+      'https://playerservices.streamtheworld.com/api/livestream-redirect/SER_ASO_GRANADAAAC.aac',
+      'https://playerservices.streamtheworld.com/api/livestream-redirect/CADENASER.mp3'
+    ]},
   { id:'cope', name:'COPE Granada', tag:'99.8 FM · Granada', color:'#0a4aa0', abbr:'COPE',
-    url:'https://wecast-bl02.flumotion.com/copesedes/granada.mp3' },
+    urls:[
+      'https://granada-copesedes-rrcast.flumotion.com/copesedes/granada-low.mp3',
+      'https://wecast-bl02.flumotion.com/copesedes/granada.mp3',
+      'https://wecast-b02-01.flumotion.com/copesedes/granada.mp3',
+      'https://wecast-b02-02.flumotion.com/copesedes/granada.mp3',
+      'https://flucast13-h-cloud.flumotion.com/cope/net1.mp3'
+    ]},
   { id:'canalsur', name:'Canal Sur Radio', tag:'Andalucía · en directo', color:'#1a9b8a', abbr:'CSR',
-    url:'https://rtva-live-radio.flumotion.com/rtva/csr.mp3' },
+    urls:[
+      'https://rtva-live-radio.flumotion.com/rtva/csr.mp3',
+      'https://cdnlive.shooowit.net/rtvalive/channel01.isml/index.m3u8'
+    ]},
   { id:'canalsurgr', name:'Canal Sur Radio Granada', tag:'Andalucía · Granada', color:'#12857a', abbr:'CSG',
-    url:'https://rtva-live-radio.flumotion.com/rtva/csrgra.mp3' },
+    urls:[
+      'https://rtva-live-radio.flumotion.com/rtva/csrgra.mp3'
+    ]},
   { id:'ondacero', name:'Onda Cero', tag:'Nacional · en directo', color:'#ff7a00', abbr:'OC',
-    url:'https://radio-atres-live.ondacero.es/api/livestream-redirect/OCAAC.aac' }
+    urls:[
+      'https://radio-atres-live.ondacero.es/api/livestream-redirect/OCAAC.aac',
+      'https://atres-live.ondacero.es/api/livestream-redirect/OCRAAC.aac',
+      'https://icecast-streaming.nice264.com/ondacero'
+    ]}
 ];
 
-const audio = document.getElementById('audio');
-const listEl = document.getElementById('list');
-const player = document.getElementById('player');
-const pName = document.getElementById('pName');
-const pState = document.getElementById('pState');
-const pBadge = document.getElementById('pBadge');
+const audio   = document.getElementById('audio');
+const listEl  = document.getElementById('list');
+const player  = document.getElementById('player');
+const pName   = document.getElementById('pName');
+const pState  = document.getElementById('pState');
+const pDot    = document.getElementById('pDot');
+const pBadge  = document.getElementById('pBadge');
 const playBtn = document.getElementById('playBtn');
-const playIcon = document.getElementById('playIcon');
-const volEl = document.getElementById('vol');
+const playIcon= document.getElementById('playIcon');
+const volEl   = document.getElementById('vol');
 
-const ICON_PLAY = 'M8 5v14l11-7z';
+const ICON_PLAY  = 'M8 5v14l11-7z';
 const ICON_PAUSE = 'M6 5h4v14H6zM14 5h4v14h-4z';
-const ICON_LOAD = 'M12 4V2A10 10 0 0 0 2 12h2a8 8 0 0 1 8-8z';
+const ICON_LOAD  = 'M12 4V2A10 10 0 0 0 2 12h2a8 8 0 0 1 8-8z';
 
-let current = null;
+let current   = null;   // emisora seleccionada
+let urlIdx    = 0;      // índice de la url que estamos usando
+let wantPlay  = false;  // el usuario quiere oír la radio (aunque ahora esté cortada)
+let attempt   = 0;      // reintentos consecutivos
+let retryTimer= null;
+let lastTime  = 0;      // para detectar audio congelado
+let stalledFor= 0;
 
+/* ---------- construcción de la lista ---------- */
 STATIONS.forEach(s => {
   const el = document.createElement('div');
   el.className = 'station';
   el.dataset.id = s.id;
+  el.tabIndex = 0;
+  el.setAttribute('role','button');
   el.innerHTML = `
     <div class="badge" style="background:linear-gradient(135deg, ${s.color}, ${shade(s.color)})">${s.abbr}</div>
     <div class="meta"><h2>${s.name}</h2><span>${s.tag}</span></div>
     <div class="eq"><i></i><i></i><i></i><i></i></div>`;
   el.addEventListener('click', () => select(s));
+  el.addEventListener('keydown', e => { if(e.key==='Enter'||e.key===' '){ e.preventDefault(); select(s); }});
   listEl.appendChild(el);
 });
 
@@ -180,34 +229,15 @@ function shade(hex){
   return `rgb(${r},${g},${b})`;
 }
 
-function select(s){
-  if(current && current.id===s.id){ togglePlay(); return; }
-  current = s;
-  audio.src = s.url;
-  pName.textContent = s.name;
-  pBadge.textContent = s.abbr;
-  pBadge.style.background = `linear-gradient(135deg, ${s.color}, ${shade(s.color)})`;
-  player.classList.add('show');
-  play();
-  markActive();
+/* ---------- estado visible ---------- */
+function setState(txt, kind){           // kind: live | wait | bad | off
+  pState.textContent = txt;
+  pDot.className = 'dot' + (kind && kind!=='off' ? ' '+kind : '');
 }
-
-function play(){
-  pState.textContent = 'Conectando…';
-  setIcon(ICON_LOAD, true);
-  audio.play().catch(err => { pState.textContent = 'No se pudo reproducir. Reintenta.'; setIcon(ICON_PLAY,false); });
+function setIcon(d, spinning){
+  playIcon.querySelector('path').setAttribute('d', d);
+  playIcon.classList.toggle('spin', !!spinning);
 }
-function togglePlay(){ audio.paused ? play() : audio.pause(); }
-
-playBtn.addEventListener('click', () => { if(!current) return; togglePlay(); });
-
-audio.addEventListener('playing', () => { pState.textContent='En directo ● reproduciendo'; setIcon(ICON_PAUSE,false); markActive(); });
-audio.addEventListener('pause',   () => { pState.textContent='En pausa'; setIcon(ICON_PLAY,false); markActive(true); });
-audio.addEventListener('waiting', () => { pState.textContent='Cargando…'; setIcon(ICON_LOAD,true); });
-audio.addEventListener('error',   () => { if(current){ pState.textContent='Emisora no disponible ahora'; setIcon(ICON_PLAY,false);} });
-
-function setIcon(d, spinning){ playIcon.querySelector('path').setAttribute('d',d); playIcon.classList.toggle('spin', !!spinning); }
-
 function markActive(paused){
   document.querySelectorAll('.station').forEach(el => {
     const on = current && el.dataset.id===current.id;
@@ -216,20 +246,133 @@ function markActive(paused){
   });
 }
 
+/* ---------- selección y reproducción ---------- */
+function select(s){
+  if(current && current.id===s.id){ wantPlay ? stop() : startFrom(0); return; }
+  current = s;
+  pName.textContent = s.name;
+  pBadge.textContent = s.abbr;
+  pBadge.style.background = `linear-gradient(135deg, ${s.color}, ${shade(s.color)})`;
+  player.classList.add('show');
+  startFrom(0);
+}
+
+function startFrom(i){
+  urlIdx = i; attempt = 0;
+  wantPlay = true;
+  connect();
+}
+
+function srcFor(url, bust){
+  // El parámetro anti-caché sólo se añade al reconectar: evita que el
+  // navegador reutilice una conexión de streaming ya muerta.
+  if(!bust) return url;
+  return url + (url.includes('?') ? '&' : '?') + '_r=' + Date.now();
+}
+
+function connect(){
+  if(!current) return;
+  clearTimeout(retryTimer);
+  const url = current.urls[urlIdx] || current.urls[0];
+  setState(attempt ? `Reconectando… (intento ${attempt})` : 'Conectando…', 'wait');
+  setIcon(ICON_LOAD, true);
+  lastTime = 0; stalledFor = 0;
+  try{ audio.pause(); }catch(e){}
+  audio.src = srcFor(url, attempt>0);
+  audio.load();
+  audio.play().catch(() => { if(wantPlay) scheduleRetry(true); });
+  markActive();
+}
+
+function stop(){
+  wantPlay = false;
+  clearTimeout(retryTimer);
+  audio.pause();
+  audio.removeAttribute('src');
+  audio.load();                       // libera la conexión de red
+  setState('En pausa', 'off');
+  setIcon(ICON_PLAY, false);
+  markActive(true);
+}
+
+/* Reintento con espera creciente. nextUrl=true → prueba otra fuente. */
+function scheduleRetry(nextUrl){
+  if(!wantPlay || !current) return;
+  clearTimeout(retryTimer);
+  attempt++;
+  if(nextUrl && current.urls.length > 1){
+    urlIdx = (urlIdx + 1) % current.urls.length;
+  }
+  const wait = Math.min(1000 * Math.pow(1.7, Math.min(attempt,6)), 15000);
+  if(attempt > 12){
+    setState('No hay conexión con la emisora', 'bad');
+  }else{
+    setState(`Se ha cortado · reconectando en ${Math.round(wait/1000)}s`, 'wait');
+  }
+  setIcon(ICON_LOAD, true);
+  retryTimer = setTimeout(connect, wait);
+}
+
+playBtn.addEventListener('click', () => {
+  if(!current) return;
+  wantPlay ? stop() : startFrom(urlIdx);
+});
+
+/* ---------- eventos del elemento audio ---------- */
+audio.addEventListener('playing', () => {
+  attempt = 0; stalledFor = 0;
+  setState('En directo · reproduciendo', 'live');
+  setIcon(ICON_PAUSE, false);
+  markActive();
+});
+audio.addEventListener('waiting',  () => { if(wantPlay){ setState('Cargando…','wait'); setIcon(ICON_LOAD,true);} });
+audio.addEventListener('stalled',  () => { if(wantPlay) scheduleRetry(false); });
+audio.addEventListener('ended',    () => { if(wantPlay) scheduleRetry(false); });
+audio.addEventListener('error',    () => { if(wantPlay) scheduleRetry(true); });
+audio.addEventListener('pause',    () => {
+  // Pausa que no ha pedido el usuario (el sistema cortó el audio) → reconectar
+  if(wantPlay && !audio.ended) scheduleRetry(false);
+});
+
+/* ---------- vigilante: detecta audio congelado ---------- */
+setInterval(() => {
+  if(!wantPlay || !current || audio.paused) return;
+  if(audio.currentTime === lastTime){
+    stalledFor += 2;
+    if(stalledFor >= 8){ stalledFor = 0; scheduleRetry(false); }   // 8 s sin avanzar
+  }else{
+    lastTime = audio.currentTime; stalledFor = 0;
+  }
+}, 2000);
+
+/* ---------- red y segundo plano ---------- */
+window.addEventListener('online', () => { if(wantPlay){ attempt = 0; connect(); } });
+window.addEventListener('offline', () => { if(wantPlay) setState('Sin internet · esperando red','bad'); });
+document.addEventListener('visibilitychange', () => {
+  if(document.visibilityState === 'visible' && wantPlay && audio.paused){ attempt = 0; connect(); }
+});
+
+/* ---------- volumen ---------- */
 volEl.addEventListener('input', () => audio.volume = parseFloat(volEl.value));
 audio.volume = parseFloat(volEl.value);
 
+/* ---------- controles del sistema ---------- */
 if('mediaSession' in navigator){
   audio.addEventListener('playing', () => {
     navigator.mediaSession.metadata = new MediaMetadata({
-      title: current ? current.name : 'VicRadio', artist: current ? current.tag : '', album:'VicRadio'
+      title: current ? current.name : 'VicRadio',
+      artist: current ? current.tag : '',
+      album:'VicRadio'
     });
-    navigator.mediaSession.playbackState='playing';
+    navigator.mediaSession.playbackState = 'playing';
   });
-  navigator.mediaSession.setActionHandler('play', play);
-  navigator.mediaSession.setActionHandler('pause', () => audio.pause());
+  audio.addEventListener('pause', () => { navigator.mediaSession.playbackState = 'paused'; });
+  navigator.mediaSession.setActionHandler('play',  () => { if(current) startFrom(urlIdx); });
+  navigator.mediaSession.setActionHandler('pause', () => stop());
+  navigator.mediaSession.setActionHandler('stop',  () => stop());
 }
 
+/* ---------- instalación PWA ---------- */
 let deferred=null;
 const installBtn=document.getElementById('installBtn');
 window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferred=e; installBtn.classList.add('show'); });
@@ -246,8 +389,8 @@ if('serviceWorker' in navigator){
 const hint=document.getElementById('hint');
 const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent);
 hint.textContent = isIOS
-  ? 'Para instalar en iPhone: pulsa Compartir y "Añadir a pantalla de inicio".'
-  : 'Consejo: usa "Instalar app" o el menú del navegador para añadirla a la pantalla de inicio.';
+  ? 'Para instalar en iPhone: pulsa Compartir y "Añadir a pantalla de inicio". Si se corta, la app se reconecta sola.'
+  : 'Consejo: usa "Instalar app" o el menú del navegador para añadirla a la pantalla de inicio. Si se corta, la app se reconecta sola.';
 </script>
 </body>
 </html>
