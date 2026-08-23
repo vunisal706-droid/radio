@@ -198,13 +198,51 @@ const ICON_PLAY  = 'M8 5v14l11-7z';
 const ICON_PAUSE = 'M6 5h4v14H6zM14 5h4v14h-4z';
 const ICON_LOAD  = 'M12 4V2A10 10 0 0 0 2 12h2a8 8 0 0 1 8-8z';
 
-let current   = null;   // emisora seleccionada
-let urlIdx    = 0;      // índice de la url que estamos usando
-let wantPlay  = false;  // el usuario quiere oír la radio (aunque ahora esté cortada)
-let attempt   = 0;      // reintentos consecutivos
-let retryTimer= null;
-let lastTime  = 0;      // para detectar audio congelado
-let stalledFor= 0;
+const KEEPALIVE  = true;   // pon false si notas cualquier rareza con la notificación
+const STALL_MS   = 15000;  // sin avanzar el audio -> recuperar
+const RESUME_MS  = 6000;   // pausado sin querer -> reanudar
+
+let current    = null;   // emisora seleccionada
+let urlIdx     = 0;      // fuente en uso
+let wantPlay   = false;  // el usuario quiere oír la radio
+let userPaused = false;  // la pausa la ha pedido el usuario
+let attempt    = 0;      // reconexiones completas consecutivas
+let retryTimer = null;
+let lastTime   = -1;     // último currentTime visto
+let lastMoveAt = 0;      // instante real en que el audio avanzó por última vez
+
+/* ---------------------------------------------------------------
+   KEEPALIVE — la clave para el segundo plano en Android.
+   Un audio SILENCIOSO en bucle mantiene la pestaña clasificada como
+   "reproduciendo audio" aunque el stream se caiga. Así Android no
+   estrangula los temporizadores ni degrada el proceso, y el vigilante
+   puede reconectar con la pantalla apagada.
+----------------------------------------------------------------*/
+let keepEl = null;
+
+function silentWavUrl(seconds){
+  const rate = 8000, n = rate * seconds, bytes = 44 + n * 2;
+  const buf = new ArrayBuffer(bytes), v = new DataView(buf);
+  const str = (o, s) => { for(let i=0;i<s.length;i++) v.setUint8(o+i, s.charCodeAt(i)); };
+  str(0,'RIFF'); v.setUint32(4, bytes-8, true); str(8,'WAVEfmt ');
+  v.setUint32(16,16,true); v.setUint16(20,1,true); v.setUint16(22,1,true);
+  v.setUint32(24,rate,true); v.setUint32(28,rate*2,true);
+  v.setUint16(32,2,true); v.setUint16(34,16,true);
+  str(36,'data'); v.setUint32(40, n*2, true);   // muestras a cero = silencio
+  return URL.createObjectURL(new Blob([buf], {type:'audio/wav'}));
+}
+
+function startKeepAlive(){
+  if(!KEEPALIVE) return;
+  if(!keepEl){
+    keepEl = new Audio(silentWavUrl(5));
+    keepEl.loop = true;
+    keepEl.volume = 1;          // el contenido ya es silencio: inaudible,
+    keepEl.preload = 'auto';    // pero cuenta como reproducción para Android
+  }
+  keepEl.play().catch(()=>{});
+}
+function stopKeepAlive(){ if(keepEl){ keepEl.pause(); } }
 
 /* ---------- construcción de la lista ---------- */
 STATIONS.forEach(s => {
@@ -245,111 +283,125 @@ function markActive(paused){
     el.classList.toggle('paused', on && (paused || audio.paused));
   });
 }
+function touchProgress(){ lastTime = audio.currentTime; lastMoveAt = Date.now(); }
 
-/* ---------- selección y reproducción ---------- */
+/* ---------- selección ---------- */
 function select(s){
-  if(current && current.id===s.id){ wantPlay ? stop() : startFrom(0); return; }
+  if(current && current.id===s.id){ wantPlay && !userPaused ? pauseByUser() : resume(); return; }
   current = s;
+  urlIdx = 0; attempt = 0;
   pName.textContent = s.name;
   pBadge.textContent = s.abbr;
   pBadge.style.background = `linear-gradient(135deg, ${s.color}, ${shade(s.color)})`;
   player.classList.add('show');
-  startFrom(0);
-}
-
-function startFrom(i){
-  urlIdx = i; attempt = 0;
-  wantPlay = true;
+  updateMediaMeta(s);
+  wantPlay = true; userPaused = false;
+  startKeepAlive();          // debe iniciarse con el gesto del usuario
   connect();
 }
 
-function srcFor(url, bust){
-  // El parámetro anti-caché sólo se añade al reconectar: evita que el
-  // navegador reutilice una conexión de streaming ya muerta.
-  if(!bust) return url;
+function srcFor(url){
+  // Anti-caché sólo a partir del 2º reintento: evita reutilizar una
+  // conexión muerta, pero no molesta en el caso normal.
+  if(attempt < 2) return url;
   return url + (url.includes('?') ? '&' : '?') + '_r=' + Date.now();
 }
 
+/* Reconexión completa: recarga la fuente desde cero. */
 function connect(){
   if(!current) return;
   clearTimeout(retryTimer);
+  wantPlay = true; userPaused = false;
   const url = current.urls[urlIdx] || current.urls[0];
-  setState(attempt ? `Reconectando… (intento ${attempt})` : 'Conectando…', 'wait');
+  setState(attempt ? `Reconectando… (${attempt})` : 'Conectando…', 'wait');
   setIcon(ICON_LOAD, true);
-  lastTime = 0; stalledFor = 0;
-  try{ audio.pause(); }catch(e){}
-  audio.src = srcFor(url, attempt>0);
+  lastTime = -1; lastMoveAt = Date.now();
+  audio.src = srcFor(url);
   audio.load();
-  audio.play().catch(() => { if(wantPlay) scheduleRetry(true); });
+  audio.play().catch(() => { if(wantPlay) scheduleRetry(); });
   markActive();
 }
 
-function stop(){
-  wantPlay = false;
+/* Reanudar sin tocar la conexión: es lo primero que se intenta siempre. */
+function resume(){
+  if(!current) return;
+  wantPlay = true; userPaused = false;
+  startKeepAlive();
   clearTimeout(retryTimer);
-  audio.pause();
-  audio.removeAttribute('src');
-  audio.load();                       // libera la conexión de red
+  if(!audio.src){ connect(); return; }
+  setIcon(ICON_LOAD, true);
+  lastMoveAt = Date.now();
+  audio.play().catch(() => connect());
+}
+
+function pauseByUser(){
+  userPaused = true; wantPlay = false;
+  clearTimeout(retryTimer);
+  audio.pause();                 // se mantiene la fuente: reanudar es instantáneo
+  stopKeepAlive();
   setState('En pausa', 'off');
   setIcon(ICON_PLAY, false);
   markActive(true);
 }
 
-/* Reintento con espera creciente. nextUrl=true → prueba otra fuente. */
-function scheduleRetry(nextUrl){
+/* Reintento con espera creciente. Cambia de fuente tras varios fallos. */
+function scheduleRetry(){
   if(!wantPlay || !current) return;
   clearTimeout(retryTimer);
   attempt++;
-  if(nextUrl && current.urls.length > 1){
-    urlIdx = (urlIdx + 1) % current.urls.length;
+  if(attempt % 3 === 0 && current.urls.length > 1){
+    urlIdx = (urlIdx + 1) % current.urls.length;   // probar otra fuente
   }
-  const wait = Math.min(1000 * Math.pow(1.7, Math.min(attempt,6)), 15000);
-  if(attempt > 12){
-    setState('No hay conexión con la emisora', 'bad');
-  }else{
-    setState(`Se ha cortado · reconectando en ${Math.round(wait/1000)}s`, 'wait');
-  }
+  const wait = Math.min(1200 * Math.pow(1.6, Math.min(attempt,6)), 15000);
+  setState(attempt > 12 ? 'Emisora no disponible' : `Se cortó · reintento en ${Math.round(wait/1000)}s`, attempt > 12 ? 'bad' : 'wait');
   setIcon(ICON_LOAD, true);
   retryTimer = setTimeout(connect, wait);
 }
 
 playBtn.addEventListener('click', () => {
   if(!current) return;
-  wantPlay ? stop() : startFrom(urlIdx);
+  (wantPlay && !userPaused) ? pauseByUser() : resume();
 });
 
 /* ---------- eventos del elemento audio ---------- */
 audio.addEventListener('playing', () => {
-  attempt = 0; stalledFor = 0;
+  attempt = 0; touchProgress();
   setState('En directo · reproduciendo', 'live');
   setIcon(ICON_PAUSE, false);
   markActive();
 });
-audio.addEventListener('waiting',  () => { if(wantPlay){ setState('Cargando…','wait'); setIcon(ICON_LOAD,true);} });
-audio.addEventListener('stalled',  () => { if(wantPlay) scheduleRetry(false); });
-audio.addEventListener('ended',    () => { if(wantPlay) scheduleRetry(false); });
-audio.addEventListener('error',    () => { if(wantPlay) scheduleRetry(true); });
-audio.addEventListener('pause',    () => {
-  // Pausa que no ha pedido el usuario (el sistema cortó el audio) → reconectar
-  if(wantPlay && !audio.ended) scheduleRetry(false);
+audio.addEventListener('timeupdate', touchProgress);
+audio.addEventListener('waiting', () => { if(wantPlay && !userPaused){ setState('Cargando…','wait'); setIcon(ICON_LOAD,true);} });
+audio.addEventListener('error',   () => { if(wantPlay && !userPaused) scheduleRetry(); });
+audio.addEventListener('ended',   () => { if(wantPlay && !userPaused) scheduleRetry(); });
+audio.addEventListener('pause',   () => {
+  // NO se reconecta aquí: una pausa del sistema (llamada, notificación,
+  // audio de otra app) es casi siempre temporal. El vigilante decide.
+  if(userPaused) return;
+  setIcon(ICON_PLAY, false);
+  markActive(true);
 });
 
-/* ---------- vigilante: detecta audio congelado ---------- */
+/* ---------- vigilante (mide tiempo real, no ticks) ---------- */
 setInterval(() => {
-  if(!wantPlay || !current || audio.paused) return;
-  if(audio.currentTime === lastTime){
-    stalledFor += 2;
-    if(stalledFor >= 8){ stalledFor = 0; scheduleRetry(false); }   // 8 s sin avanzar
-  }else{
-    lastTime = audio.currentTime; stalledFor = 0;
-  }
-}, 2000);
+  if(!current || !wantPlay || userPaused) return;
+  const idle = Date.now() - lastMoveAt;
 
-/* ---------- red y segundo plano ---------- */
-window.addEventListener('online', () => { if(wantPlay){ attempt = 0; connect(); } });
-window.addEventListener('offline', () => { if(wantPlay) setState('Sin internet · esperando red','bad'); });
+  if(audio.paused){
+    // Pausa que no ha pedido el usuario: primero reanudar, sin cortar nada.
+    if(idle > RESUME_MS) resume();
+    return;
+  }
+  if(audio.currentTime !== lastTime){ touchProgress(); return; }
+  if(idle > STALL_MS) connect();      // congelado de verdad -> reconectar
+}, 3000);
+
+/* ---------- red ---------- */
+window.addEventListener('online',  () => { if(wantPlay && !userPaused){ attempt = 0; connect(); } });
+window.addEventListener('offline', () => { if(wantPlay && !userPaused) setState('Sin internet · esperando red','bad'); });
 document.addEventListener('visibilitychange', () => {
-  if(document.visibilityState === 'visible' && wantPlay && audio.paused){ attempt = 0; connect(); }
+  // Al volver a primer plano sólo se reanuda si estaba parado. Nunca se corta.
+  if(document.visibilityState === 'visible' && wantPlay && !userPaused && audio.paused) resume();
 });
 
 /* ---------- volumen ---------- */
@@ -357,19 +409,30 @@ volEl.addEventListener('input', () => audio.volume = parseFloat(volEl.value));
 audio.volume = parseFloat(volEl.value);
 
 /* ---------- controles del sistema ---------- */
-if('mediaSession' in navigator){
-  audio.addEventListener('playing', () => {
+function updateMediaMeta(s){
+  if(!('mediaSession' in navigator) || !s) return;
+  try{
     navigator.mediaSession.metadata = new MediaMetadata({
-      title: current ? current.name : 'VicRadio',
-      artist: current ? current.tag : '',
-      album:'VicRadio'
+      title: s.name, artist: s.tag, album: 'VicRadio',
+      artwork: [{ src:'icon-192.png', sizes:'192x192', type:'image/png' },
+                { src:'icon-512.png', sizes:'512x512', type:'image/png' }]
     });
+  }catch(e){}
+}
+
+if('mediaSession' in navigator){
+  // playbackState se mantiene en 'playing' mientras reconectamos: así
+  // Android conserva la notificación y no degrada el proceso.
+  audio.addEventListener('playing', () => {
+    updateMediaMeta(current);
     navigator.mediaSession.playbackState = 'playing';
   });
-  audio.addEventListener('pause', () => { navigator.mediaSession.playbackState = 'paused'; });
-  navigator.mediaSession.setActionHandler('play',  () => { if(current) startFrom(urlIdx); });
-  navigator.mediaSession.setActionHandler('pause', () => stop());
-  navigator.mediaSession.setActionHandler('stop',  () => stop());
+  audio.addEventListener('pause', () => {
+    navigator.mediaSession.playbackState = userPaused ? 'paused' : 'playing';
+  });
+  navigator.mediaSession.setActionHandler('play',  () => resume());
+  navigator.mediaSession.setActionHandler('pause', () => pauseByUser());
+  navigator.mediaSession.setActionHandler('stop',  () => pauseByUser());
 }
 
 /* ---------- instalación PWA ---------- */

@@ -2,7 +2,7 @@
 // - El HTML se pide SIEMPRE primero a la red (así las actualizaciones llegan al móvil).
 // - Los iconos y el manifest se sirven desde caché.
 // - El audio nunca se cachea (es streaming en directo).
-const CACHE = 'vicradio-v2';
+const CACHE = 'vicradio-v4';
 const ASSETS = [
   './',
   './index.html',
