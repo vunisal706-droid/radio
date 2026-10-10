@@ -1,5 +1,5 @@
 {
- "comprobado": "2026-10-10T19:49+00:00",
+ "comprobado": "2026-10-10T19:52+00:00",
  "emisoras": {
   "marca": {
    "urls": [
@@ -11,7 +11,8 @@
     "https://playerservices.streamtheworld.com/api/livestream-redirect/RADIOMARCA_NACIONAL.mp3",
     "https://25603.live.streamtheworld.com/RADIOMARCA_NACIONAL.mp3",
     "https://playerservices.streamtheworld.com/api/livestream-redirect/RADIOMARCA_NACIONALAAC.aac"
-   ]
+   ],
+   "reserva": []
   },
   "ser": {
    "urls": [
@@ -23,19 +24,21 @@
     "https://playerservices.streamtheworld.com/api/livestream-redirect/SER_ASO_GRANADA.mp3",
     "https://playerservices.streamtheworld.com/api/livestream-redirect/SER_ASO_GRANADAAAC.aac",
     "https://playerservices.streamtheworld.com/api/livestream-redirect/CADENASER.mp3"
-   ]
+   ],
+   "reserva": []
   },
   "cope": {
    "urls": [
-    "https://sonic.mediatelekom.net/8096/stream",
     "https://granada-copesedes-rrcast.flumotion.com/copesedes/granada-low.mp3",
     "https://wecast-bl02.flumotion.com/copesedes/granada.mp3",
     "https://wecast-b02-01.flumotion.com/copesedes/granada.mp3",
     "https://wecast-b02-02.flumotion.com/copesedes/granada.mp3",
-    "https://flucast13-h-cloud.flumotion.com/cope/net1.mp3"
+    "https://flucast13-h-cloud.flumotion.com/cope/net1.mp3",
+    "https://net1-cope-rrcast.flumotion.com/cope/net1-low.mp3"
    ],
-   "ok": [
-    "https://sonic.mediatelekom.net/8096/stream"
+   "ok": [],
+   "reserva": [
+    "https://net1-cope-rrcast.flumotion.com/cope/net1-low.mp3"
    ]
   },
   "canalsur": {
@@ -45,7 +48,8 @@
    ],
    "ok": [
     "https://rtva-live-radio.flumotion.com/rtva/csr.mp3"
-   ]
+   ],
+   "reserva": []
   },
   "canalsurgr": {
    "urls": [
@@ -53,7 +57,8 @@
    ],
    "ok": [
     "https://rtva-live-radio.flumotion.com/rtva/csrgra.mp3"
-   ]
+   ],
+   "reserva": []
   },
   "ondacero": {
    "urls": [
@@ -63,7 +68,8 @@
    ],
    "ok": [
     "https://radio-atres-live.ondacero.es/api/livestream-redirect/OCAAC.aac"
-   ]
+   ],
+   "reserva": []
   }
  }
 }
