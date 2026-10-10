@@ -260,6 +260,25 @@ STATIONS.forEach(s => {
   listEl.appendChild(el);
 });
 
+/* ---------- emisoras.json: lo actualiza GitHub Actions cada mañana ----------
+   Pone primero las direcciones que hoy funcionan y añade las nuevas que encuentre.
+   Si no se puede leer, se usan las de arriba tal cual. */
+fetch('emisoras.json?_=' + Date.now(), {cache:'no-store'})
+  .then(r => r.ok ? r.json() : null)
+  .then(j => {
+    if(!j || !j.emisoras) return;
+    STATIONS.forEach(s => {
+      const e = j.emisoras[s.id]; if(!e || !Array.isArray(e.urls)) return;
+      const nuevas = [...(e.ok || []), ...e.urls, ...s.urls].filter((u, i, a) => u && a.indexOf(u) === i);
+      s.urls.splice(0, s.urls.length, ...nuevas);
+      if(Array.isArray(e.ok) && !e.ok.length){
+        const el = document.querySelector(`.station[data-id="${s.id}"] .meta span`);
+        if(el) el.textContent = s.tag + ' · ⚠️ hoy puede fallar';
+      }
+    });
+  })
+  .catch(()=>{});
+
 function shade(hex){
   const n=parseInt(hex.slice(1),16);
   let r=(n>>16)&255,g=(n>>8)&255,b=n&255;

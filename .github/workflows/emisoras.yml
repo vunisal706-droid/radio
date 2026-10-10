@@ -1,0 +1,26 @@
+name: Comprobar emisoras
+
+on:
+  schedule:
+    - cron: '0 5 * * *'   # cada día hacia las 7:00 (hora de España)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  emisoras:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Probar las emisoras
+        run: python scripts/emisoras.py
+      - name: Guardar cambios
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git add emisoras.json 2>/dev/null || true
+          git diff --cached --quiet || (git commit -m "Actualizar estado de las emisoras" && git pull --rebase && git push)
