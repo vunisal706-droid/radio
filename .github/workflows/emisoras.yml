@@ -4,6 +4,10 @@ on:
   schedule:
     - cron: '0 5 * * *'   # cada día hacia las 7:00 (hora de España)
   workflow_dispatch:
+  push:                   # y también cuando se cambia la lista de emisoras
+    paths:
+      - 'scripts/emisoras.py'
+      - '.github/workflows/emisoras.yml'
 
 permissions:
   contents: write
