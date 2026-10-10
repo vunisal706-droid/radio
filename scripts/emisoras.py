@@ -5,7 +5,10 @@
   en Radio Browser (directorio público de radios).
 - Nunca borra direcciones: solo las reordena. Si el servidor de GitHub no
   puede oír casi nada (bloqueo por país), no toca el orden."""
-import json, re, ssl, sys, time, urllib.request, urllib.parse, datetime
+import json, re, ssl, sys, time, urllib.request, urllib.parse, datetime, unicodedata
+
+def norm(t):
+    return unicodedata.normalize('NFD', (t or '').lower()).encode('ascii', 'ignore').decode()
 
 UA = 'VicRadio/1.0 (comprobador de emisoras)'
 
@@ -67,8 +70,10 @@ def radio_browser(nombre):
             req = urllib.request.Request(f'https://{host}.api.radio-browser.info/json/stations/search?{q}', headers={'User-Agent': UA})
             with urllib.request.urlopen(req, timeout=15) as r:
                 res = json.loads(r.read())
+            n = norm(nombre)
+            # solo emisoras cuyo nombre contenga lo buscado (evita colar otra radio)
             return [x.get('url_resolved') or x.get('url') for x in res
-                    if (x.get('url_resolved') or x.get('url', '')).startswith('https://')]
+                    if n in norm(x.get('name', '')) and (x.get('url_resolved') or x.get('url', '')).startswith('https://')]
         except Exception:
             continue
     return []
@@ -83,12 +88,15 @@ def main():
     for eid, e in EMISORAS.items():
         print(f'· {eid}')
         # direcciones extra encontradas otros días
-        extra = [u for u in anterior.get(eid, {}).get('urls', []) if u not in e['urls']]
-        urls = e['urls'] + extra
+        urls = e['urls']
+        guardadas = anterior.get(eid, {}).get('reserva', [])
         estado = {}
         for u in urls:
             estado[u] = prueba(u); total += 1; buenas += estado[u]
             print(f'    {"✓" if estado[u] else "✗"} {u[:80]}')
+        for u in guardadas:   # reservas de otros días: se vuelven a probar
+            if u not in estado:
+                estado[u] = prueba(u)
         if not any(estado.values()):
             print('    sin ninguna que funcione → buscando en Radio Browser')
             for nombre in e['buscar']:
@@ -101,10 +109,12 @@ def main():
                         break
                 if any(estado.values()):
                     break
-        orden = [u for u in estado if estado[u]] + [u for u in estado if not estado[u]]
-        # solo se guardan como extra las nuevas que funcionan
-        orden = [u for u in orden if u in urls or estado[u]]
-        resultado[eid] = {'urls': orden, 'ok': [u for u in orden if estado.get(u)]}
+        # Orden: tus direcciones que funcionan, luego tus direcciones que hoy no
+        # responden (puede ser solo un bloqueo desde EE. UU.), y al final, como
+        # último recurso, las nuevas encontradas que sí funcionan.
+        propias = [u for u in urls if estado[u]] + [u for u in urls if not estado[u]]
+        nuevas = [u for u in estado if u not in urls and estado[u]]
+        resultado[eid] = {'urls': propias + nuevas, 'ok': [u for u in urls if estado[u]], 'reserva': nuevas}
     fiable = total and buenas / total >= 0.3
     if not fiable:
         print(f'Solo {buenas}/{total} direcciones responden: parece un bloqueo del servidor de GitHub. No se cambia nada.')
