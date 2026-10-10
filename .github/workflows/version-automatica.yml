@@ -1,0 +1,60 @@
+name: Versión automática
+
+# Cada vez que subes cambios, cambia el nombre de la caché del service worker
+# para que los móviles descarguen la versión nueva sin tener que borrar nada.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: version-automatica
+  cancel-in-progress: false
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Subir la versión del service worker
+        env:
+          ANTES: ${{ github.event.before }}
+        run: |
+          python3 - <<'PY'
+          import os, re, subprocess, datetime
+          sello = 'b' + datetime.datetime.now(datetime.timezone.utc).strftime('%y%m%d%H%M')
+          sws = [f for f in subprocess.run(['git', 'ls-files'], capture_output=True, text=True).stdout.split()
+                 if re.search(r'(^|/)(sw|service-?worker)\.js$', f, re.I) and not f.startswith('mnt/')]
+          # Si en esta subida ya cambiaste tú el service worker, no se toca
+          antes = os.environ.get('ANTES', '')
+          if antes and not set(antes) <= {'0'}:
+              r = subprocess.run(['git', 'diff', '--name-only', antes, 'HEAD'], capture_output=True, text=True)
+              if r.returncode == 0 and any(f in r.stdout.split() for f in sws):
+                  print('El service worker ya venía cambiado en esta subida.'); sws = []
+          rx = re.compile(r"""^(\s*(?:const|let|var)\s+(\w+)\s*=\s*)(['"`])([^'"`]*)\3""", re.M)
+          for f in sws:
+              s = open(f, encoding='utf-8', newline='').read()
+              hecho = False
+              for m in rx.finditer(s):
+                  nombre, valor = m.group(2), m.group(4)
+                  if re.search(r'cache|version', nombre, re.I) or nombre == 'C':
+                      nuevo = re.sub(r'-b\d{10}$', '', valor) + '-' + sello
+                      s = s[:m.start(4)] + nuevo + s[m.end(4):]
+                      print(f'{f}: {nombre} {valor} -> {nuevo}'); hecho = True; break
+              if not hecho:   # sin nombre de caché reconocible: al menos fuerza la actualización
+                  s = re.sub(r'^// versión automática: .*\n', '', s)
+                  s = f'// versión automática: {sello}\n' + s
+                  print(f'{f}: marca de versión {sello}')
+              open(f, 'w', encoding='utf-8', newline='').write(s)
+          PY
+      - name: Guardar
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet || (git commit -m "Versión automática del service worker" && git pull --rebase && git push)
