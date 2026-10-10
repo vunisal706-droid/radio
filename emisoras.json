@@ -1,0 +1,69 @@
+{
+ "comprobado": "2026-10-10T19:49+00:00",
+ "emisoras": {
+  "marca": {
+   "urls": [
+    "https://playerservices.streamtheworld.com/api/livestream-redirect/RADIOMARCA_NACIONAL.mp3",
+    "https://25603.live.streamtheworld.com/RADIOMARCA_NACIONAL.mp3",
+    "https://playerservices.streamtheworld.com/api/livestream-redirect/RADIOMARCA_NACIONALAAC.aac"
+   ],
+   "ok": [
+    "https://playerservices.streamtheworld.com/api/livestream-redirect/RADIOMARCA_NACIONAL.mp3",
+    "https://25603.live.streamtheworld.com/RADIOMARCA_NACIONAL.mp3",
+    "https://playerservices.streamtheworld.com/api/livestream-redirect/RADIOMARCA_NACIONALAAC.aac"
+   ]
+  },
+  "ser": {
+   "urls": [
+    "https://playerservices.streamtheworld.com/api/livestream-redirect/SER_ASO_GRANADA.mp3",
+    "https://playerservices.streamtheworld.com/api/livestream-redirect/SER_ASO_GRANADAAAC.aac",
+    "https://playerservices.streamtheworld.com/api/livestream-redirect/CADENASER.mp3"
+   ],
+   "ok": [
+    "https://playerservices.streamtheworld.com/api/livestream-redirect/SER_ASO_GRANADA.mp3",
+    "https://playerservices.streamtheworld.com/api/livestream-redirect/SER_ASO_GRANADAAAC.aac",
+    "https://playerservices.streamtheworld.com/api/livestream-redirect/CADENASER.mp3"
+   ]
+  },
+  "cope": {
+   "urls": [
+    "https://sonic.mediatelekom.net/8096/stream",
+    "https://granada-copesedes-rrcast.flumotion.com/copesedes/granada-low.mp3",
+    "https://wecast-bl02.flumotion.com/copesedes/granada.mp3",
+    "https://wecast-b02-01.flumotion.com/copesedes/granada.mp3",
+    "https://wecast-b02-02.flumotion.com/copesedes/granada.mp3",
+    "https://flucast13-h-cloud.flumotion.com/cope/net1.mp3"
+   ],
+   "ok": [
+    "https://sonic.mediatelekom.net/8096/stream"
+   ]
+  },
+  "canalsur": {
+   "urls": [
+    "https://rtva-live-radio.flumotion.com/rtva/csr.mp3",
+    "https://cdnlive.shooowit.net/rtvalive/channel01.isml/index.m3u8"
+   ],
+   "ok": [
+    "https://rtva-live-radio.flumotion.com/rtva/csr.mp3"
+   ]
+  },
+  "canalsurgr": {
+   "urls": [
+    "https://rtva-live-radio.flumotion.com/rtva/csrgra.mp3"
+   ],
+   "ok": [
+    "https://rtva-live-radio.flumotion.com/rtva/csrgra.mp3"
+   ]
+  },
+  "ondacero": {
+   "urls": [
+    "https://radio-atres-live.ondacero.es/api/livestream-redirect/OCAAC.aac",
+    "https://atres-live.ondacero.es/api/livestream-redirect/OCRAAC.aac",
+    "https://icecast-streaming.nice264.com/ondacero"
+   ],
+   "ok": [
+    "https://radio-atres-live.ondacero.es/api/livestream-redirect/OCAAC.aac"
+   ]
+  }
+ }
+}
