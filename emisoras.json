@@ -1,5 +1,5 @@
 {
- "comprobado": "2026-10-13T12:30+00:00",
+ "comprobado": "2026-10-14T09:58+00:00",
  "emisoras": {
   "marca": {
    "urls": [
@@ -33,12 +33,13 @@
     "https://wecast-bl02.flumotion.com/copesedes/granada.mp3",
     "https://wecast-b02-01.flumotion.com/copesedes/granada.mp3",
     "https://wecast-b02-02.flumotion.com/copesedes/granada.mp3",
-    "https://flucast13-h-cloud.flumotion.com/cope/net1.mp3"
+    "https://flucast13-h-cloud.flumotion.com/cope/net1.mp3",
+    "https://net1-cope-rrcast.flumotion.com/cope/net1-low.mp3"
    ],
-   "ok": [
-    "https://granada-copesedes-rrcast.flumotion.com/copesedes/granada-low.mp3"
-   ],
-   "reserva": []
+   "ok": [],
+   "reserva": [
+    "https://net1-cope-rrcast.flumotion.com/cope/net1-low.mp3"
+   ]
   },
   "canalsur": {
    "urls": [
