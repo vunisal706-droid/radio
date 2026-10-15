@@ -1,5 +1,5 @@
 {
- "comprobado": "2026-10-14T09:58+00:00",
+ "comprobado": "2026-10-15T09:40+00:00",
  "emisoras": {
   "marca": {
    "urls": [
@@ -36,7 +36,9 @@
     "https://flucast13-h-cloud.flumotion.com/cope/net1.mp3",
     "https://net1-cope-rrcast.flumotion.com/cope/net1-low.mp3"
    ],
-   "ok": [],
+   "ok": [
+    "https://granada-copesedes-rrcast.flumotion.com/copesedes/granada-low.mp3"
+   ],
    "reserva": [
     "https://net1-cope-rrcast.flumotion.com/cope/net1-low.mp3"
    ]
