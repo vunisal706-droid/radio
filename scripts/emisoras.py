@@ -23,6 +23,8 @@ EMISORAS = {
       'https://playerservices.streamtheworld.com/api/livestream-redirect/SER_ASO_GRANADAAAC.aac',
       'https://playerservices.streamtheworld.com/api/livestream-redirect/CADENASER.mp3']},
   'cope': {'buscar': ['COPE Granada', 'COPE'], 'urls': [
+      'https://wecast-bl01.flumotion.com/copesedes/granada.mp3',
+      'https://wecast-bl01.flumotion.com/copesedes/granada-low.mp3',
       'https://granada-copesedes-rrcast.flumotion.com/copesedes/granada-low.mp3',
       'https://wecast-bl02.flumotion.com/copesedes/granada.mp3',
       'https://wecast-b02-01.flumotion.com/copesedes/granada.mp3',

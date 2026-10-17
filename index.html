@@ -160,6 +160,8 @@ const STATIONS = [
     ]},
   { id:'cope', name:'COPE Granada', tag:'99.8 FM · Granada', color:'#0a4aa0', abbr:'COPE',
     urls:[
+      'https://wecast-bl01.flumotion.com/copesedes/granada.mp3',
+      'https://wecast-bl01.flumotion.com/copesedes/granada-low.mp3',
       'https://granada-copesedes-rrcast.flumotion.com/copesedes/granada-low.mp3',
       'https://wecast-bl02.flumotion.com/copesedes/granada.mp3',
       'https://wecast-b02-01.flumotion.com/copesedes/granada.mp3',
@@ -471,6 +473,24 @@ const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent);
 hint.textContent = isIOS
   ? 'Para instalar en iPhone: pulsa Compartir y "Añadir a pantalla de inicio". Si se corta, la app se reconecta sola.'
   : 'Consejo: usa "Instalar app" o el menú del navegador para añadirla a la pantalla de inicio. Si se corta, la app se reconecta sola.';
+</script>
+<script>
+// ===== Novedades (salen una sola vez en cada dispositivo) =====
+(function(){
+  var ID='2026-10-17', K='novedades-vicradio', ITEMS=["📻 <b>COPE Granada</b> vuelve a sonar: había cambiado la dirección de su emisión y ya está puesta la nueva."];
+  function ver(){ try{ if(localStorage.getItem(K)===ID) return; }catch(e){ return; }
+    var d=document.createElement('div');
+    d.style.cssText='position:fixed;inset:0;background:rgba(15,23,42,.55);display:flex;align-items:center;justify-content:center;z-index:99999;padding:18px;font-family:inherit';
+    d.innerHTML='<div role="dialog" aria-modal="true" style="background:#fff;border-radius:16px;max-width:420px;width:100%;padding:22px 22px 18px;box-shadow:0 20px 60px rgba(0,0,0,.3);color:#1e293b">'+
+      '<div style="font-size:1.2rem;font-weight:800;margin-bottom:10px">✨ Novedades</div>'+
+      '<ul style="margin:0 0 16px;padding-left:20px;line-height:1.5;font-size:.95rem">'+ITEMS.map(function(i){return '<li>'+i+'</li>';}).join('')+'</ul>'+
+      '<button type="button" style="width:100%;background:#2563eb;color:#fff;border:0;border-radius:10px;padding:12px;font-size:1rem;font-weight:700;cursor:pointer">¡Entendido!</button></div>';
+    function cerrar(){ try{ localStorage.setItem(K,ID); }catch(e){} d.remove(); }
+    d.querySelector('button').onclick=cerrar; d.addEventListener('click',function(e){ if(e.target===d) cerrar(); });
+    document.body.appendChild(d);
+  }
+  if(document.readyState==='complete') setTimeout(ver,600); else window.addEventListener('load',function(){ setTimeout(ver,600); });
+})();
 </script>
 </body>
 </html>

@@ -29,6 +29,8 @@
   },
   "cope": {
    "urls": [
+    "https://wecast-bl01.flumotion.com/copesedes/granada.mp3",
+    "https://wecast-bl01.flumotion.com/copesedes/granada-low.mp3",
     "https://granada-copesedes-rrcast.flumotion.com/copesedes/granada-low.mp3",
     "https://wecast-bl02.flumotion.com/copesedes/granada.mp3",
     "https://wecast-b02-01.flumotion.com/copesedes/granada.mp3",
@@ -36,7 +38,8 @@
     "https://flucast13-h-cloud.flumotion.com/cope/net1.mp3"
    ],
    "ok": [
-    "https://granada-copesedes-rrcast.flumotion.com/copesedes/granada-low.mp3"
+    "https://wecast-bl01.flumotion.com/copesedes/granada.mp3",
+    "https://wecast-bl01.flumotion.com/copesedes/granada-low.mp3"
    ],
    "reserva": []
   },
