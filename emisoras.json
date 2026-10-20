@@ -1,5 +1,5 @@
 {
- "comprobado": "2026-10-19T10:34+00:00",
+ "comprobado": "2026-10-20T09:51+00:00",
  "emisoras": {
   "marca": {
    "urls": [
@@ -39,7 +39,8 @@
    ],
    "ok": [
     "https://wecast-bl01.flumotion.com/copesedes/granada.mp3",
-    "https://wecast-bl01.flumotion.com/copesedes/granada-low.mp3"
+    "https://wecast-bl01.flumotion.com/copesedes/granada-low.mp3",
+    "https://granada-copesedes-rrcast.flumotion.com/copesedes/granada-low.mp3"
    ],
    "reserva": []
   },
