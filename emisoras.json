@@ -1,5 +1,5 @@
 {
- "comprobado": "2026-10-21T09:53+00:00",
+ "comprobado": "2026-10-22T09:53+00:00",
  "emisoras": {
   "marca": {
    "urls": [
@@ -39,7 +39,9 @@
    ],
    "ok": [
     "https://wecast-bl01.flumotion.com/copesedes/granada.mp3",
-    "https://wecast-bl01.flumotion.com/copesedes/granada-low.mp3"
+    "https://wecast-bl01.flumotion.com/copesedes/granada-low.mp3",
+    "https://granada-copesedes-rrcast.flumotion.com/copesedes/granada-low.mp3",
+    "https://wecast-bl02.flumotion.com/copesedes/granada.mp3"
    ],
    "reserva": []
   },
@@ -57,7 +59,9 @@
    "urls": [
     "https://rtva-live-radio.flumotion.com/rtva/csrgra.mp3"
    ],
-   "ok": [],
+   "ok": [
+    "https://rtva-live-radio.flumotion.com/rtva/csrgra.mp3"
+   ],
    "reserva": []
   },
   "ondacero": {
